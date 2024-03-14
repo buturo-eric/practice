@@ -102,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
   @override
-  void initState() {
+  void initState() { 
     // Initialize the database service with a unique ID
     databaseService = DatabaseService(uid: Uuid().v4());
 
