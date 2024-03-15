@@ -27,7 +27,9 @@ late Stream<List<int>> infoStream;
 
 class _QuizPlayState extends State<QuizPlay> {
   late QuerySnapshot questionSnaphot;
-  late DatabaseService databaseService; // Declare the database service
+  late List<DocumentSnapshot> questionSnapshots;
+  late DatabaseService databaseService;
+  int currentIndex = 0;
   late StreamController<List<int>> infoStreamController;
 
   bool isLoading = true;
@@ -47,7 +49,9 @@ class _QuizPlayState extends State<QuizPlay> {
       _incorrect = 0;
       isLoading = false;
       total = questionSnaphot.docs.length;
-      setState(() {});
+      setState(() {
+        questionSnapshots = value.docs;
+      });
       print("init don $total ${widget.quizId} ");
     });
 
@@ -60,6 +64,12 @@ class _QuizPlayState extends State<QuizPlay> {
     }
 
     super.initState();
+  }
+
+  void moveToNextQuestion() {
+    setState(() {
+      currentIndex = (currentIndex + 1) % questionSnapshots.length;
+    });
   }
 
   QuestionModel getQuestionModelFromDatasnapshot(
@@ -107,69 +117,60 @@ class _QuizPlayState extends State<QuizPlay> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
-      body: isLoading
-          ? Container(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : SingleChildScrollView(
-              child: Container(
-                child: Column(
-                  children: [
-                    InfoHeader(
-                      length: questionSnaphot.docs.length,
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Quiz'),
+    ),
+    body: questionSnapshots == null
+        ? Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            child: Container(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Question ${currentIndex + 1} of ${questionSnapshots.length}',
+                    style: TextStyle(fontSize: 18.0),
+                  ),
+                  SizedBox(height: 16.0),
+                  QuizPlayTile(
+                    questionModel: getQuestionModelFromDatasnapshot(
+                      questionSnapshots[currentIndex],
                     ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    // ignore: unnecessary_null_comparison
-                    questionSnaphot.docs == null
-                        ? Container(
-                            child: Center(
-                              child: Text("No Data"),
+                    index: currentIndex,
+                  ),
+                  SizedBox(height: 16.0),
+                  ElevatedButton(
+                    onPressed: currentIndex == questionSnapshots.length - 1 ? null : moveToNextQuestion,
+                    child: Text('Next'),
+                  ),
+                  SizedBox(height: 16.0),
+                  if (currentIndex == questionSnapshots.length - 1)
+                    ElevatedButton(
+                        onPressed: () {
+                          // Navigate to the results page
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Results(
+                                correct: _correct,
+                                incorrect: _incorrect,
+                                total: total,
+                              ),
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: questionSnaphot.docs.length,
-                            shrinkWrap: true,
-                            physics: ClampingScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              return QuizPlayTile(
-                                questionModel: getQuestionModelFromDatasnapshot(
-                                  questionSnaphot.docs[index],
-                                ),
-                                index: index,
-                              );
-                            },
-                          ),
-                  ],
-                ),
+                          );
+                        },
+                        child: Text('Complete Quiz'),
+                    ),
+
+                ],
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.check),
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => Results(
-                correct: _correct,
-                incorrect: _incorrect,
-                total: total,
-              ),
-            ),
-          );
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        shape: CircleBorder(),
-      ),
-    );
-  }
+          ),
+  );
+}
 }
 
 class InfoHeader extends StatefulWidget {
@@ -277,7 +278,8 @@ class _QuizPlayTileState extends State<QuizPlayTile> {
               correctAnswer: widget.questionModel.correctOption,
               optionSelected: optionSelected,
             ),
-          ),
+        ),
+
           SizedBox(
             height: 4,
           ),
@@ -382,4 +384,5 @@ class _QuizPlayTileState extends State<QuizPlayTile> {
     );
   }
 }
+
 
