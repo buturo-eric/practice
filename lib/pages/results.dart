@@ -3,6 +3,8 @@ import 'package:testt/main.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -10,14 +12,17 @@ FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initNotifications(); // Initialize notifications
+  
+  // Pass the quiz ID as an argument to the main function
+  String quizId = await getQuizIdFromSharedPreferences(); // Replace with your function to get the quiz ID from SharedPreferences
   runApp(
     MaterialApp(
       home: Results(
         incorrect: 0,
         total: 10,
         correct: 10,
-        userName:
-            await loadUserName(), // Load user name from shared preferences
+        userName: await loadUserName(), // Load user name from shared preferences
+        quizId: quizId, // Provide the quiz ID here
       ),
     ),
   );
@@ -27,6 +32,11 @@ void main() async {
 Future<String?> loadUserName() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString('userName');
+}
+
+Future<String> getQuizIdFromSharedPreferences() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('quizId') ?? ''; // Replace with your key for quiz ID in SharedPreferences
 }
 
 Future<void> initNotifications() async {
@@ -48,11 +58,14 @@ Future<void> initNotifications() async {
 class Results extends StatefulWidget {
   final int total, correct, incorrect;
   final String? userName;
+  final String quizId;
+
   Results({
     required this.incorrect,
     required this.total,
     required this.correct,
     this.userName,
+    required this.quizId,
   });
 
   @override
@@ -66,6 +79,8 @@ class _ResultsState extends State<Results> {
 
     // Call sendNotification when the page loads
     sendNotification();
+    // Call updateQuizResults when the page loads
+    updateQuizResults();
   }
 
   @override
@@ -163,5 +178,41 @@ class _ResultsState extends State<Results> {
       'Congratulations on completing the quiz!',
       platformChannelSpecifics,
     );
+  }
+
+  Future<void> updateQuizResults() async {
+    // Get the current user ID
+    String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+    // Check if the user ID is not null and the quiz ID is available
+    if (userId != null && widget.quizId != null) {
+      // Get the current date and time in ISO 8601 format
+      String currentDate = DateTime.now().toIso8601String();
+
+      // Create a reference to the Firestore instance
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      try {
+        // Update the quiz result document in the quizResults collection
+        await firestore
+            .collection('quizResults')
+            .where('userID', isEqualTo: userId)
+            .where('quizID', isEqualTo: widget.quizId) // Filter by selected quiz ID
+            .where('status', isEqualTo: 'in progress')
+            .get()
+            .then((querySnapshot) {
+          querySnapshot.docs.forEach((doc) async {
+            await doc.reference.update({
+              'score': widget.correct, // Update score to the correct value
+              'status': 'completed', // Set status to "completed"
+              'dateCompleted': currentDate, // Update dateCompleted to current date
+            });
+          });
+        });
+      } catch (error) {
+        print('Error updating quiz results: $error');
+        // Handle error
+      }
+    }
   }
 }
