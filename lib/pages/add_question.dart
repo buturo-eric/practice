@@ -9,7 +9,8 @@ import 'package:uuid/uuid.dart';
 
 class AddQuestion extends StatefulWidget {
   final String quizId;
-  AddQuestion(this.quizId);
+  final DatabaseService databaseService;
+  AddQuestion(this.quizId, {required this.databaseService});
 
   @override
   _AddQuestionState createState() => _AddQuestionState();

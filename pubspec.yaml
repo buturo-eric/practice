@@ -53,6 +53,7 @@ dependencies:
   cloud_firestore: ^4.15.8
   uuid: ^3.0.4
   flutter_local_notifications: ^9.9.1
+  sqflite: ^2.3.2
 
 dev_dependencies:
   flutter_test:

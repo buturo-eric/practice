@@ -104,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // Navigate to the AddQuestion page
       Navigator.pushReplacement( 
         context,
-        MaterialPageRoute(builder: (context) => AddQuestion(quizId)),
+        MaterialPageRoute(builder: (context) => AddQuestion(quizId, databaseService: databaseService,)),
       );
     }).catchError((error) {
       print(error);
