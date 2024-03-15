@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:testt/ThemeProvider.dart';
@@ -35,22 +36,33 @@ class SignupPage extends StatelessWidget {
         // User registered successfully
         print('User registered successfully: ${userCredential.user?.email}');
 
+        // Create a new collection for the user in Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user?.uid)
+            .set({
+          'email': email,
+          'role': 'student', // Hardcoded role to 'student'
+          // Add additional fields as needed
+        });
+
         // Automatically sign in the user after successful registration
         await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: email, password: password);
 
         // Show a success message
         showCustomPopup(context, 'Registration successful!');
-
       } on FirebaseAuthException catch (e) {
-         // Handle registration errors
+        // Handle registration errors
         print('Error during registration: ${e.message}');
 
         // Show appropriate error message
         if (e.code == 'weak-password') {
-          showotherPopup(context, 'Error', 'Weak password. Please choose a stronger password.');
+          showotherPopup(
+              context, 'Error', 'Weak password. Please choose a stronger password.');
         } else if (e.code == 'email-already-in-use') {
-          showotherPopup(context, 'Error', 'Email is already in use. Please use a different email.');
+          showotherPopup(
+              context, 'Error', 'Email is already in use. Please use a different email.');
         } else {
           // Handle other error cases
           showotherPopup(context, 'Error', 'Registration failed. Please try again later.');
@@ -62,12 +74,11 @@ class SignupPage extends StatelessWidget {
     }
   }
 
-
   // Function to show a popup with header and body
   void showCustomPopup(BuildContext context, String message) {
     // Call the showPopup function from popup.dart
     showPopup(context, 'Success', message);
-    
+
     // Optionally, you can add additional actions after the popup is closed
     // For example, navigate to another page.
     Navigator.of(context).pushReplacement(

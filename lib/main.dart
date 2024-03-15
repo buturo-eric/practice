@@ -518,12 +518,43 @@ class QuizTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizPlay(id ?? ""),
-            ));
+      onTap: () async {
+        // Get the current user ID
+        String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+        // Check if the user ID is not null
+        if (userId != null) {
+          // Get the current date and time in ISO 8601 format
+          String currentDate = DateTime.now().toIso8601String();
+
+          // Create a new quiz result document ID
+          String resultId = Uuid().v4();
+
+          // Create a reference to the Firestore instance
+          FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+          try {
+            // Add the quiz result to the quizResults collection
+            await firestore.collection('quizResults').doc(resultId).set({
+              'userID': userId, // Reference to user document
+              'quizID': id, // Reference to quiz document
+              'score': 0, // Initialize score as 0
+              'status': 'in progress', // Quiz status (completed or in progress)
+              'dateCompleted': null, // Date and time when the quiz was completed
+            });
+
+            // Navigate to the quiz play page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => QuizPlay(id ?? ""),
+              ),
+            );
+          } catch (error) {
+            print('Error recording quiz result: $error');
+            // Handle error
+          }
+        }
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 24),
